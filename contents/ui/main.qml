@@ -174,6 +174,7 @@ Item {
         pickerTimer.stop();
         pickerDiagnosticsTimer.stop();
         picker.hide();
+        picker.selectedIndex = -1;
         picker.candidates = [];
     }
 
@@ -243,6 +244,7 @@ Item {
         const area = Workspace.clientArea(root.maximizeArea, source);
         const halfWidth = area.width / 2;
         picker.candidates = candidates;
+        picker.selectedIndex = 0;
         picker.x = side === "left" ? area.x + halfWidth : area.x;
         picker.y = area.y;
         picker.width = halfWidth;
@@ -275,6 +277,11 @@ Item {
         }
 
         root.pending = { source: window, side: side };
+        if (candidates.length === 1) {
+            console.log("snap-assist: auto-select single window", candidates[0].caption);
+            tileSelected(candidates[0]);
+            return;
+        }
         console.log("snap-assist: start", side, fromPointer ? "pointer" : "keyboard", window.caption);
 
         if (fromPointer) {
@@ -428,6 +435,7 @@ Item {
         onScreenChanged: root.logPickerState("screenChanged")
 
         property var candidates: []
+        property int selectedIndex: -1
 
         SystemPalette {
             id: palette
@@ -447,12 +455,28 @@ Item {
 
         GridView {
             id: grid
-            anchors.fill: parent
-            anchors.margins: 24
+            anchors {
+                top: pickerHeader.bottom
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                margins: 24
+                topMargin: 12
+            }
+            focus: picker.visible
             clip: true
             cellWidth: Math.max(220, (width - 12) / 2)
             cellHeight: Math.max(160, cellWidth * 0.7)
             model: picker.candidates
+            currentIndex: Math.max(0, picker.selectedIndex)
+            keyNavigationWraps: true
+            onCurrentIndexChanged: picker.selectedIndex = currentIndex
+            onModelChanged: picker.selectedIndex = model.length > 0 ? 0 : -1
+
+            Keys.onEscapePressed: root.cancelPending()
+            Keys.onReturnPressed: root.tileSelected(grid.currentItem ? grid.currentItem.clientWindow : null)
+            Keys.onEnterPressed: root.tileSelected(grid.currentItem ? grid.currentItem.clientWindow : null)
+            Keys.onSpacePressed: root.tileSelected(grid.currentItem ? grid.currentItem.clientWindow : null)
 
             delegate: Item {
                 width: grid.cellWidth - 12
@@ -462,10 +486,10 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: cardMouse.containsMouse ? "#55ffffff" : "#33ffffff"
+                    color: cardMouse.containsMouse || GridView.isCurrentItem ? "#66ffffff" : "#33ffffff"
                     radius: 10
                     border.color: palette.highlight
-                    border.width: cardMouse.containsMouse ? 2 : 0
+                    border.width: cardMouse.containsMouse || GridView.isCurrentItem ? 2 : 0
 
                     Column {
                         anchors.fill: parent
@@ -496,8 +520,48 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.tileSelected(clientWindow)
+                        onEntered: grid.currentIndex = index
+                        onClicked: {
+                            grid.currentIndex = index;
+                            root.tileSelected(clientWindow);
+                        }
                     }
+                }
+            }
+        }
+
+        Rectangle {
+            id: pickerHeader
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                margins: 24
+            }
+            height: 76
+            radius: 10
+            color: "#33000000"
+            border.color: "#44ffffff"
+            border.width: 1
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 4
+
+                Text {
+                    text: "Snap Assist • " + (root.pending ? root.oppositeSide(root.pending.side) : "") + " side"
+                    color: "white"
+                    font.pixelSize: 17
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    text: "Choose a window with click or arrows + Enter. Esc cancels. " + picker.candidates.length + " available"
+                    color: "#ddffffff"
+                    font.pixelSize: 12
+                    elide: Text.ElideRight
                 }
             }
         }
