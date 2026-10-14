@@ -1,3 +1,5 @@
+# --- ABANDONED ---
+
 # KWin Native Snap Assistant
 
 A small Plasma 6 KWin script that completes a half-screen snap. After a window
