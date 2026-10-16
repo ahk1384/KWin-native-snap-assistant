@@ -1,107 +1,129 @@
-# KWin Native Snap Assistant
+# KWin Native Snap Assistant (v2.0)
 
-A small Plasma 6 KWin script that completes a half-screen snap. After a window
-is quick-tiled to the left or right, it offers the other windows for the empty
-half of the screen. 
+A modern, dynamic **Windows 11-style Snap Assist** for KDE Plasma 6.
 
-Keyboard quick-tiling opens KWin's window switcher (native) and here we expect you've moved the window with the Meta + rigth / left arrow and you're still holding the Meta key. 
+When you snap a window (via mouse drag, corner snap, or keyboard shortcut), Snap Assist immediately presents open windows as interactive thumbnail cards in the unoccupied screen area, allowing you to rapidly complete your desktop layout.
 
-Pointer quick-tiling opens
-a custom visual picker after a short delay that you can access with your mouse - so this one contradicts the naming `native` a little, but I just couldn't make it work in other way. 
+---
 
-## Install
+## ✨ Features
 
-Run these commands from the directory that contains this repository:
+- **Dynamic Zone Detection (All Layouts Supported)**:
+  - **Halves**: Left/Right 50% vertical split, Top/Bottom 50% horizontal split (ideal for portrait monitors).
+  - **Quarters (4 Quadrants)**: Top-Left, Top-Right, Bottom-Left, Bottom-Right corner snapping.
+  - **Thirds & Ultrawide**: Left 1/3, Center 1/3, Right 1/3, and 25/50/25 center-focus layouts.
+  - **Asymmetric Splits**: 70/30 or 2/3 + 1/3 configurations.
+  - **KWin Native Custom Zones**: Integrates with custom layouts configured in Plasma 6 (`Meta + T`).
+- **Sequential Multi-Zone Chaining**:
+  - Snapping into a 3-zone or 4-zone layout prompts you in each empty zone sequentially until the entire screen layout is filled.
+- **Windows 11 Fluent Acrylic UI**:
+  - Frosted glass/acrylic panel positioned directly within the target empty zone.
+  - Live window thumbnails (`WindowThumbnail`) preserving aspect ratio.
+  - Native application icons (`Kirigami.Icon`) and truncated title captions.
+  - Smooth entrance animations and fluid sliding transitions between chained zones.
+  - System accent color highlight borders and subtle hover scale elevation.
+- **Fast Keyboard & Mouse Navigation**:
+  - **Number Badges (1–9)**: Press any number key to immediately select and snap that candidate.
+  - **Arrow Keys**: Navigate the grid with Up/Down/Left/Right, confirm with Enter or Space.
+  - **Close Button (✕)**: Hovering over any card reveals a close button to dismiss unwanted windows directly from the assistant.
+  - **Escape / Click Outside**: Press Escape or click outside the panel to dismiss without tiling.
+- **Multi-Monitor Awareness**:
+  - Accurately identifies monitor outputs, client work areas, and prevents cross-screen leakage.
+- **Smart Candidate Filtering**:
+  - Filters out windows that are already tiled in other zones.
+  - Respects virtual desktops and current screen outputs.
+  - Suppresses itself when all screen zones are already filled.
+
+---
+
+## 🚀 Installation
+
+Run these commands from the directory containing the repository:
+
+```bash
+kpackagetool6 --type=KWin/Script --install .
+```
+
+Or from the parent directory:
 
 ```bash
 kpackagetool6 --type=KWin/Script --install KWin-native-snap-assistant
 ```
 
-Enable **Snap Assist** in **System Settings → Window Management → KWin
-Scripts** after installing it.
+Enable **Snap Assist** in **System Settings → Window Management → KWin Scripts**.
 
-To update an existing installation:
+### Upgrade an existing installation
 
 ```bash
-kpackagetool6 --type=KWin/Script --upgrade KWin-native-snap-assistant
+kpackagetool6 --type=KWin/Script --upgrade .
 ```
 
-To remove it:
+### Remove
 
 ```bash
 kpackagetool6 --type=KWin/Script --remove snap-assist
 ```
 
-The equivalent short options are `-i`, `-u`, and `-r`.
+---
 
-Actually after installation it is available also in Plasma setting GUI among other KWin scripts.
+## ⚙️ Configuration
 
-## Reload during development
+Settings can be customized in `contents/config/config.json`:
 
-KWin exposes script lifecycle methods over D-Bus:
+```json
+{
+    "skipPickerOnKeyboardSnap": false,
+    "closePickerOnClickOutside": true,
+    "suppressPickerWhenAllFilled": true,
+    "enableMultiZoneChaining": true,
+    "autoSelectSingleCandidate": false,
+    "showNumberShortcuts": true,
+    "showWindowIcons": true,
+    "showCloseButtonOnHover": true,
+    "animationSpeedMs": 220
+}
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `skipPickerOnKeyboardSnap` | `false` | When `false`, snapping via keyboard (`Meta + Left/Right/Up/Down`) invokes Snap Assist just like mouse snapping. Set to `true` for silent keyboard tiling. |
+| `closePickerOnClickOutside` | `true` | Clicking anywhere outside candidate cards (desktop, panel, snapped window) dismisses assist. |
+| `suppressPickerWhenAllFilled` | `true` | When all layout zones on the screen are occupied by tiled windows, Snap Assist suppresses itself. |
+| `enableMultiZoneChaining` | `true` | When multiple zones are empty (e.g. 4 quarters), sequentially prompts for each empty zone. |
+| `autoSelectSingleCandidate` | `false` | When only 1 candidate window is available, automatically snaps it without waiting for input. |
+| `showNumberShortcuts` | `true` | Overlays `1`, `2`, `3` badges on cards for fast number-key selection. |
+| `showWindowIcons` | `true` | Displays application icons in candidate cards. |
+| `showCloseButtonOnHover` | `true` | Displays a close button on card hover to close unwanted windows. |
+| `animationSpeedMs` | `220` | Duration of entrance and zone-transition animations in milliseconds. |
+
+---
+
+## 🛠️ Development & Reloading
+
+To reload the script via D-Bus after modifying code:
 
 ```bash
 qdbus6 org.kde.KWin /Scripting unloadScript snap-assist
 qdbus6 org.kde.KWin /Scripting start
 ```
 
-Check that `unloadScript` returns `true` before starting scripts again. KWin can
-retain a compiled QML component even after a D-Bus unload/reload. If the source
-line numbers or log messages still match an older version, disable and re-enable
-the script in System Settings. Logging out and back in is the reliable fallback.
+### Live Logs
 
-## Logs and troubleshooting
-
-Follow the QML and KWin scripting journal categories with:
+To inspect Snap Assist events:
 
 ```bash
-journalctl --user -f QT_CATEGORY=qml QT_CATEGORY=kwin_scripting
+journalctl --user -f QT_CATEGORY=qml QT_CATEGORY=kwin_scripting | grep --line-buffered 'snap-assist:'
 ```
 
-To show only this script's messages:
-
-```bash
-journalctl --user -f QT_CATEGORY=qml | grep --line-buffered 'snap-assist:'
-```
-
-Useful event sequence for a pointer snap:
-
-```text
-snap-assist: move started ...
-snap-assist: move finished ...
-snap-assist: start left pointer ...
-snap-assist: picker left ...
-```
-
-If `picker` is logged but no overlay appears, first make sure KWin is not running
-a cached copy by comparing the reported QML source line with the installed file
-under `~/.local/share/kwin/scripts/snap-assist/`.
-
-## Implementation notes
-
-- `tileChanged` is the primary snap notification.
-- Some pointer snaps do not deliver that signal at a useful time, so
-  `frameGeometryChanged` provides a pointer-only fallback with a 120 ms debounce.
-- Geometry changes from ordinary applications and keyboard tiling do not arm the
-  fallback.
-- The picker waits 200 ms after a pointer snap so KWin can finish the operation.
-
-## Personal notes
-Shame on me, it was developed with AI tools. But at least it works. I think it is still something as in my knowledge the community couldn't provide a functional version since Plasma 6 was out and the old beloved [script](https://github.com/emvaized/kde-snap-assist) is not compatible with it. Also as I see, the Plasma Desktop project rarely focus on such UX related things, so we can cook what we have. 
-
-This code and the functionality can be improved and any kind of contribution is welcome!
-
-## API references
-
-- [KWin scripting](https://develop.kde.org/docs/plasma/kwin/)
-- [Qt Quick `Window`](https://doc.qt.io/qt-6/qml-qtquick-window.html)
-- [Qt QML `Connections`](https://doc.qt.io/qt-6/qml-qtqml-connections.html)
-- [Qt QML `Instantiator`](https://doc.qt.io/qt-6/qml-qtqml-models-instantiator.html)
-- [Qt QML `Timer`](https://doc.qt.io/qt-6/qml-qtqml-timer.html)
-
-## Validate changes
+### Code Validation
 
 ```bash
 qmllint contents/ui/main.qml
 git diff --check
 ```
+
+---
+
+## 📜 License
+
+GPL-3.0-or-later.
